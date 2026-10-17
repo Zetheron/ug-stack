@@ -1,0 +1,35 @@
+# Membangun APK di server GitHub (tanpa perlu memasang Flutter/Android SDK di komputer sendiri).
+# Cara pakai: tab Actions -> "Build APK" -> Run workflow -> unduh artefak "ug-stack-apk".
+name: Build APK
+on:
+  workflow_dispatch: {}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      # Flet 0.23.x memakai Flutter 3.22 (Android SDK sudah tersedia di runner ubuntu-latest)
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.22.2"
+      - run: pip install -r requirements.txt
+      # Opsional: kunci admin untuk APK dari GitHub Secret UG_ADMIN_KEY (Settings -> Secrets and variables -> Actions).
+      # Perhatian: kunci yang ikut dikemas ke APK dapat diekstrak orang yang memiliki APK. Untuk admin sungguhan, pakai server web.
+      - name: Tulis kunci admin
+        env:
+          UG_ADMIN_KEY: ${{ secrets.UG_ADMIN_KEY }}
+        run: |
+          if [ -n "$UG_ADMIN_KEY" ]; then printf '%s\n' "$UG_ADMIN_KEY" > admin_key.txt; fi
+      - run: flet build apk --project ugstack --product "UGStack" --org id.ac.gunadarma
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ug-stack-apk
+          path: build/apk/*.apk

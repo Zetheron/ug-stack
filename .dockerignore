@@ -1,0 +1,9 @@
+.git
+.github
+__pycache__
+build
+data
+docs
+tests
+*.md
+admin_key.txt

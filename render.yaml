@@ -1,0 +1,12 @@
+# Blueprint Render: New + -> Blueprint -> pilih repositori ini.
+services:
+  - type: web
+    name: ug-stack
+    runtime: docker
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URL        # alamat database Neon (diisi manual di dashboard Render)
+        sync: false
+      - key: UG_ADMIN_KEY        # kunci rahasia login admin (kode 60 detik); isi manual, min. 20 karakter acak
+        sync: false

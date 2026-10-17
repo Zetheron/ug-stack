@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UG-Stack - Generator Kode Admin</title>
+<style>
+  body{background:#0B0F17;color:#fff;font-family:monospace;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
+  .box{background:#131A27;border:1px solid #333;padding:28px;border-radius:15px;max-width:520px;width:92%;box-shadow:0 0 20px rgba(4,170,109,.25)}
+  h2{margin:0 0 6px;color:#04AA6D} p{font-size:13px;color:#ccc;line-height:1.5}
+  label{display:block;margin-top:14px;font-size:12px;color:#9aa0a6}
+  input[type=text],input[type=password]{width:100%;box-sizing:border-box;padding:12px;background:#000;color:#04AA6D;border:1px solid #04AA6D;border-radius:8px;font-size:15px;outline:none;margin-top:6px}
+  #code{font-size:28px;letter-spacing:3px;text-align:center}
+  button{background:#04AA6D;color:#fff;border:none;padding:12px 16px;font-weight:bold;border-radius:8px;cursor:pointer;font-size:14px;width:100%;margin-top:10px}
+  button.alt{background:#333}
+  .bar{height:6px;background:#222;border-radius:3px;margin-top:12px;overflow:hidden}.bar>div{height:100%;background:#04AA6D;transition:width .9s linear}
+  #left{color:#888;font-size:12px;margin-top:6px;text-align:center}
+  .warn{font-size:11px;color:#f59e0b;margin-top:14px}
+</style>
+</head>
+<body>
+<div class="box">
+  <h2>🔐 Generator Kode Admin</h2>
+  <p>Kode berganti otomatis setiap 60 detik dan hanya berlaku <b>sekali</b>. Kunci rahasia dimasukkan di sini dan diproses di peramban Anda;
+     <b>tidak ada kunci yang tertulis di berkas ini</b> dan tidak ada data yang dikirim ke mana pun.</p>
+
+  <label for="secret">Kunci admin (isi UG_ADMIN_KEY di server / isi berkas admin_key.txt)</label>
+  <input type="password" id="secret" autocomplete="off" placeholder="tempel kunci rahasia">
+  <label><input type="checkbox" id="remember"> ingat kunci di perangkat ini (localStorage)</label>
+
+  <label for="base">Alamat aplikasi web (opsional, untuk membuat tautan login)</label>
+  <input type="text" id="base" placeholder="https://nama-anda.onrender.com">
+
+  <label>Kode saat ini</label>
+  <input type="text" id="code" readonly>
+  <div class="bar"><div id="fill" style="width:100%"></div></div>
+  <div id="left">-</div>
+  <button onclick="copyText('code')">Salin kode (untuk ketukan beruntun di aplikasi / APK)</button>
+  <button class="alt" onclick="copyText('url')">Salin tautan login (untuk web)</button>
+  <input type="text" id="url" readonly style="margin-top:10px;font-size:11px">
+  <div class="warn">⚠️ Jangan simpan berkas ini beserta kuncinya di tempat umum. Jangan memakai kunci yang sama dengan proyek lain.</div>
+</div>
+<script>
+const WINDOW = 60;               // detik
+const $ = id => document.getElementById(id);
+
+async function codeFor(secret, minute) {
+  // HMAC-SHA256(kunci, nomor menit), 16 karakter hex pertama - sama dengan services/admin_code.py
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', enc.encode(secret), {name: 'HMAC', hash: 'SHA-256'}, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(String(minute)));
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
+}
+
+async function tick() {
+  const secret = $('secret').value.trim();
+  const now = Date.now() / 1000;
+  const left = WINDOW - Math.floor(now % WINDOW);
+  $('fill').style.width = (left / WINDOW * 100) + '%';
+  $('left').textContent = secret ? ('berganti dalam ' + left + ' detik') : 'isi kunci admin terlebih dahulu';
+  if (!secret) { $('code').value = ''; $('url').value = ''; return; }
+  const code = await codeFor(secret, Math.floor(now / WINDOW));
+  $('code').value = code;
+  const base = $('base').value.trim().replace(/\/+$/, '');
+  $('url').value = base ? (base + '/ruang-admin?key=' + code) : '(isi alamat aplikasi untuk membuat tautan)';
+}
+
+function copyText(id) {
+  const el = $(id); el.select(); document.execCommand('copy');
+  alert('Disalin. Segera pakai sebelum waktunya habis.');
+}
+
+$('remember').addEventListener('change', () => {
+  if ($('remember').checked) localStorage.setItem('ug_admin_key', $('secret').value);
+  else localStorage.removeItem('ug_admin_key');
+});
+$('secret').addEventListener('input', () => { if ($('remember').checked) localStorage.setItem('ug_admin_key', $('secret').value); });
+const saved = localStorage.getItem('ug_admin_key');
+if (saved) { $('secret').value = saved; $('remember').checked = true; }
+tick(); setInterval(tick, 1000);
+</script>
+</body>
+</html>

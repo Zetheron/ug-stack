@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+build/
+.venv/
+venv/
+# data lokal pengguna (jangan diunggah)
+data/*.json
+data/*.tmp
+data/*.corrupt
+data/exports/
+data/backups/
+
+# kunci rahasia login admin (jangan diunggah)
+admin_key.txt
